@@ -18,7 +18,7 @@ var jsdom = require('jsdom').jsdom;
 //  Produce a Usage message, if needed
 //
 if (process.argv.length !== 4) {
-  console.error("Usage: bla input.html  output.html");
+  console.error("Usage:"  + process.argv[1] + " input.html  output.html");
   process.exit(1);
 }   
 // Collect the CLI parameters
@@ -41,7 +41,17 @@ function processHTML(html,callback) {
   for (var i = 0, m = math.length; i < m; i++) {
     var data = {math: math[i].text, format:"TeX", svg:true};
     typeset(data,(function (node,last) {return function (result) {
+//        console.log(node.getAttribute("type"));
       if (result.svg) {
+//          console.log(node.getAttribute("type"));
+        if(node.getAttribute("type") === 'math/tex; mode=display') {
+            var div = document.createElement("div");
+//            console.log(node.innerHTML);
+            div.innerHTML = result.svg;
+            div.setAttribute("style","text-align: center;");
+//            console.log(div.outerHTML);
+            node.parentNode.replaceChild(div,node); // WHY DOES THIS THROW AN ERRO????
+        }
         var span = document.createElement("span");
         span.innerHTML = result.svg;
         node.parentNode.replaceChild(span.firstChild,node);
