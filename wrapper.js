@@ -10,6 +10,7 @@
  *
  */
 
+
 var typeset = require("./mj-single-svg.js").typeset;
 var fs = require('fs');
 var jsdom = require('jsdom').jsdom;
@@ -52,9 +53,10 @@ function processHTML(html, callback) {
                     if (node.getAttribute("type") === 'math/tex; mode=display') {
                         var div = document.createElement("div");
                         div.innerHTML = result.svg;
+                        var thisSVG = div.firstChild;
                         div.setAttribute("style", "text-align: center;");
-                        div.firstChild.removeAttribute("style"); // the absolute positioning led to some problems
-                        node.parentNode.replaceChild(div, node); 
+                        thisSVG.removeAttribute("style"); // the absolute positioning led to some problems
+                        node.parentNode.replaceChild(div, node);
                     }
                     else{ 
                         var span = document.createElement("span");
@@ -63,6 +65,23 @@ function processHTML(html, callback) {
                         }
                 }
                 if (last) {
+                    var globalSVG = document.createElement("svg");
+                    globalSVG.setAttribute("style","visibility: hidden; overflow: hidden; position: absolute; top: 0px; height: 1px; width: auto; padding: 0px; border: 0px; margin: 0px; text-align: left; text-indent: 0px; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal;");
+                    globalSVG.innerHTML = "<defs></defs>";
+                    var allPaths = document.getElementsByTagName("path");
+                    for (var i = 0; i < allPaths.length; i++) {
+                        var currentPathID = allPaths[i].getAttribute("id");
+//                        console.log(currentPathID);
+//                        console.log();
+                        if ( globalSVG.querySelector("#"+currentPathID) === null){
+//                            console.log("test");
+                            globalSVG.firstChild.appendChild(allPaths[i]);     
+                        }
+                        else {
+                        allPaths[i].parentNode.removeChild(allPaths[i]);
+                        }
+                    }
+                    document.body.appendChild(globalSVG);
                     callback(document.outerHTML);
                 }
             };
