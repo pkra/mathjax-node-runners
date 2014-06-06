@@ -1,5 +1,3 @@
-#! /usr/bin/env node
-
 /****************************************
  *
  *  script2svg-html5
@@ -41,6 +39,7 @@ function svgCleaning (localElement,globalElement) {
 //            console.log(currentPath);
         }
     }
+//    localElement.removeChild(localElement.querySelector("defs");
 }
 
 //
@@ -59,12 +58,15 @@ function processHTML(html, callback) {
     var globalSVG = document.createElement("svg");
     globalSVG.setAttribute("style","visibility: hidden; overflow: hidden; position: absolute; top: 0px; height: 1px; width: auto; padding: 0px; border: 0px; margin: 0px; text-align: left; text-indent: 0px; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal;");
     globalSVG.innerHTML = "<defs></defs>";
+    var data = {
+    math: "",
+    format: "TeX",
+//    useGlobalCache: true,
+    svg: true,
+//    state: {}
+    };
     for (var i = 0, m = math.length; i < m; i++) {
-        var data = {
-            math: math[i].text,
-            format: "TeX",
-            svg: true
-        };
+        data.math = math[i].text;
         typeset(data, (function (node, last) {
             return function (result) {
                 if (result.svg) {
@@ -75,21 +77,22 @@ function processHTML(html, callback) {
                         div.setAttribute("style", "text-align: center;");
                         thisSVG.removeAttribute("style"); // the absolute positioning led to some problems?
                         node.parentNode.replaceChild(div, node);
+//                    var newDefs = document.createElement("def");
+//                    newDefs.innerHTML = (data.state.defs.innerHTML);
+//                    globalSVG.appendChild(newDefs);
                         svgCleaning(div,globalSVG);
                     }
                     else{ 
                         var span = document.createElement("span");
                         span.innerHTML = result.svg;
-                        node.parentNode.replaceChild(span.firstChild, node);
                         svgCleaning(span,globalSVG);
+                        node.parentNode.replaceChild(span.firstChild, node);
                         }
                     
                 }
                 if (last) {
-                    document.body.querySelectorAll("path").forEach(function(element){
-//                        console.log(element);
-                        element.parentNode.removeChild(element);
-                    });                                     
+//                    console.log(data.state.defs);
+//                    globalSVG.appendChild(data.state.defs);
                     document.body.appendChild(globalSVG);
                     callback(document.outerHTML);
                 }
