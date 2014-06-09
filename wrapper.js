@@ -9,21 +9,26 @@
  */
 
 
-var typeset = require("./mj-single-svg.js").typeset;
+var typeset = require("./lib/mj-single.js").typeset;
 var fs = require('fs');
 var jsdom = require('jsdom').jsdom;
 
 //
 //  Produce a Usage message, if needed
 //
-if (process.argv.length !== 4) {
-    console.error("Usage:" + process.argv[1] + " input.html  output.html");
+if (process.argv.length !== 5) {
+    console.error("Usage:" + process.argv[1] + " --output input.html  output.html");
     process.exit(1);
 }
 // Collect the CLI parameters
-var inputFile = process.argv[2];
+var inputFile = process.argv[3];
 //console.log(inputFile);
-var outputFile = process.argv[3];
+var outputFile = process.argv[4];
+var outputChoice = process.argv[2].substr(2);
+if (!outputChoice==="mathml" && !outputChoice==="svg"){
+        console.log("Please use '--svg' or '--mathml'");
+        process.exit(1);
+    }
 
 // function for moving paths to a global element
 function svgCleaning (localElement,globalElement) {
@@ -60,35 +65,54 @@ function processHTML(html, callback) {
     globalSVG.innerHTML = "<defs></defs>";
     var data = {
     math: "",
-    format: "TeX",
+//    format: "inline-TeX",
 //    useGlobalCache: true,
+    mml:true,
     svg: true,
 //    state: {}
     };
+
     for (var i = 0, m = math.length; i < m; i++) {
         data.math = math[i].text;
+//        console.log("getAttribute: "+math[i].getAttribute("type"));
+        if (math[i].getAttribute("type")==="math/tex; mode=display") {
+            data.format = "TeX";
+        }
+        else { data.format = "inline-TeX";}
+//        console.log("data.format: " + data.format);
         typeset(data, (function (node, last) {
             return function (result) {
-                if (result.svg) {
-                    if (node.getAttribute("type") === 'math/tex; mode=display') {
-                        var div = document.createElement("div");
-                        div.innerHTML = result.svg;
-                        var thisSVG = div.firstChild;
-                        div.setAttribute("style", "text-align: center;");
-                        thisSVG.removeAttribute("style"); // the absolute positioning led to some problems?
-                        node.parentNode.replaceChild(div, node);
-//                    var newDefs = document.createElement("def");
-//                    newDefs.innerHTML = (data.state.defs.innerHTML);
-//                    globalSVG.appendChild(newDefs);
-                        svgCleaning(div,globalSVG);
-                    }
-                    else{ 
-                        var span = document.createElement("span");
-                        span.innerHTML = result.svg;
-                        svgCleaning(span,globalSVG);
-                        node.parentNode.replaceChild(span.firstChild, node);
+                if (outputChoice==="svg"){
+                    if (result.svg) {
+//                        console.log("in the svg: " + data.format); // why is this always returning inline-TeX? Async problem?
+                        if (node.getAttribute("type") === 'math/tex; mode=display') { // would like to use data.format but see above
+                            var div = document.createElement("div");
+                            div.innerHTML = result.svg;
+                            var thisSVG = div.firstChild;
+                            div.setAttribute("style", "text-align: center;");
+                            thisSVG.removeAttribute("style"); // the absolute positioning led to some problems?
+                            node.parentNode.replaceChild(div, node);
+    //                    var newDefs = document.createElement("def");
+    //                    newDefs.innerHTML = (data.state.defs.innerHTML);
+    //                    globalSVG.appendChild(newDefs);
+                            svgCleaning(div,globalSVG);
                         }
-                    
+                        else{ 
+                            var span = document.createElement("span");
+                            span.innerHTML = result.svg;
+                            svgCleaning(span,globalSVG);
+                            node.parentNode.replaceChild(span.firstChild, node);
+                            }
+
+                    }
+                }
+                else {
+                     if (result.mml) {
+                         var span = document.createElement("span");
+                         span.innerHTML = result.mml;
+                         var thisMML = span.firstChild;
+                         node.parentNode.replaceChild(span.firstChild, node);
+                    }
                 }
                 if (last) {
 //                    console.log(data.state.defs);
