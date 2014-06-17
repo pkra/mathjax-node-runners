@@ -24,7 +24,7 @@ if (process.argv.length !== 5) {
 var inputFile = process.argv[3];
 var outputFile = process.argv[4];
 var outputChoice = process.argv[2].substr(2);
-if (!outputChoice==="mathml" && !outputChoice==="svg"){
+if (!outputChoice==="mathml" && !outputChoice==="svg" && !outputChoice==="svg-simple"){
         console.log("Please use '--svg' or '--mathml'");
         process.exit(1);
     }
@@ -68,6 +68,10 @@ function processHTML(html, callback) {
     svg: true,
 //    state: {} //see useGlobalCache
     };
+    if (outputChoice==="svg-simple"){
+        data.useFontCache = false;
+//        data.useGlobalCache = false;
+    }
 
     for (var i = 0, m = math.length; i < m; i++) {
         data.math = math[i].text;
@@ -79,30 +83,49 @@ function processHTML(html, callback) {
             return function (result) {
                 if (outputChoice==="svg"){
                     if (result.svg) {
-                        if (node.getAttribute("type") === "math/tex; mode=display") { // FIX: use data.format
-                            var div = document.createElement("div");
-                            div.innerHTML = result.svg;
-                            var thisSVG = div.firstChild;
-                            div.setAttribute("style", "text-align: center;");
+                        if (node.getAttribute("type") === "math/tex; mode=display") { // FIX: can't use data.format b/c it's asynchronous
+                            var span = document.createElement("span");
+                            span.innerHTML = result.svg;
+                            var thisSVG = span.firstChild;
+                            span.setAttribute("style", "display:block; text-align: center;");
                             thisSVG.removeAttribute("style"); // FIX: the absolute positioning led to some problems?
-                            node.parentNode.replaceChild(div, node);
-                            svgCleaning(div,globalSVG);
+                            node.parentNode.replaceChild(span, node);
                         }
                         else{ 
                             var span = document.createElement("span");
                             span.innerHTML = result.svg;
-                            svgCleaning(span,globalSVG);
                             node.parentNode.replaceChild(span.firstChild, node);
                             }
+                        svgCleaning(span,globalSVG);
                     }
                 }
-                else {
+                else if (outputChoice==="mml"){
                      if (result.mml) {
                          var span = document.createElement("span");
                          span.innerHTML = result.mml;
                          var thisMML = span.firstChild;
                          node.parentNode.replaceChild(span.firstChild, node);
                     }
+                }
+                else if (outputChoice==="svg-simple"){
+//                    console.log("yay simple");
+                     if (result.svg) {
+                        if (node.getAttribute("type") === "math/tex; mode=display") { // FIX: use data.format
+                            var span = document.createElement("span");
+                            span.innerHTML = result.svg;
+                            var thisSVG = span.firstChild;
+                            span.setAttribute("style", "display:block; text-align: center;");
+                            thisSVG.removeAttribute("style"); // FIX: the absolute positioning led to some problems?
+                            node.parentNode.replaceChild(span, node);
+        //                            svgCleaning(span,globalSVG);
+                        }
+                        else{ 
+                            var span = document.createElement("span");
+                            span.innerHTML = result.svg;
+        //                            svgCleaning(span,globalSVG);
+                            node.parentNode.replaceChild(span.firstChild, node);
+                            }
+                    }   
                 }
                 if (last) {
                     if (outputChoice==="svg"){
