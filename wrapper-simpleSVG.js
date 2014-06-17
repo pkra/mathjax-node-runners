@@ -66,6 +66,7 @@ function processHTML(html, callback) {
 //    useGlobalCache: true, //this should be the right way to gather a globalSVG but doesn't work for me
     mml:true,
     svg: true,
+    useFontCache: false, useGlobalCache: false
 //    state: {} //see useGlobalCache
     };
 
@@ -86,12 +87,12 @@ function processHTML(html, callback) {
                             div.setAttribute("style", "text-align: center;");
                             thisSVG.removeAttribute("style"); // FIX: the absolute positioning led to some problems?
                             node.parentNode.replaceChild(div, node);
-                            svgCleaning(div,globalSVG);
+//                            svgCleaning(div,globalSVG);
                         }
                         else{ 
                             var span = document.createElement("span");
                             span.innerHTML = result.svg;
-                            svgCleaning(span,globalSVG);
+//                            svgCleaning(span,globalSVG);
                             node.parentNode.replaceChild(span.firstChild, node);
                             }
                     }
