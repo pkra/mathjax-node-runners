@@ -66,7 +66,7 @@ function processHTML(html, callback) {
 //    useGlobalCache: true, //this should be the right way to gather a globalSVG but doesn't work for me
     mml:true,
     svg: true,
-//    state: {} //see useGlobalCache
+    state: {} //see useGlobalCache
     };
     if (outputChoice==="svg-simple"){
         data.useFontCache = false;
