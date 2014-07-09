@@ -24,8 +24,8 @@ if (process.argv.length !== 5) {
 var inputFile = process.argv[3];
 var outputFile = process.argv[4];
 var outputChoice = process.argv[2].substr(2);
-if (!outputChoice==="mathml" && !outputChoice==="svg" && !outputChoice==="svg-simple"){
-        console.log("Please use '--svg' or '--mathml'");
+if (!outputChoice==="mml" && !outputChoice==="svg" && !outputChoice==="svg-simple"){
+        console.log("Please use '--svg' or '--svg-simple' or '--mml'");
         process.exit(1);
     }
 
@@ -62,11 +62,12 @@ function processHTML(html, callback) {
     globalSVG.setAttribute("style","visibility: hidden; overflow: hidden; position: absolute; top: 0px; height: 1px; width: auto; padding: 0px; border: 0px; margin: 0px; text-align: left; text-indent: 0px; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal;");
     globalSVG.innerHTML = "<defs></defs>";
     var data = {
-    math: "",
-//    useGlobalCache: true, //this should be the right way to gather a globalSVG but doesn't work for me
-    mml:true,
-    svg: true,
-    state: {} //see useGlobalCache
+        width: 100, //change width in ex 100 is the default
+        math: "",
+    //    useGlobalCache: true, //this should be the right way to gather a globalSVG but doesn't work for me
+        mml:true,
+        svg: true,
+        state: {} //see useGlobalCache
     };
     if (outputChoice==="svg-simple"){
         data.useFontCache = false;
