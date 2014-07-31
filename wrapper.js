@@ -88,7 +88,7 @@ function processHTML(html, callback) {
                             var span = document.createElement("span");
                             span.innerHTML = result.svg;
                             var thisSVG = span.firstChild;
-                            span.setAttribute("style", "text-align: center; margin: 1em 0em; position: relative; display: block!important; text-indent: 0; max-width: none; max-height: none; min-width: 0; min-height: 0; width: 100%;overflow:auto");
+                            span.setAttribute("style", "text-align: center; margin: 1em 0em; position: relative; display: block!important; text-indent: 0; max-width: none; max-height: none; min-width: 0; min-height: 0; width: 100%;overflow:auto"); //move to CSS!
                             thisSVG.removeAttribute("style"); // FIX: the absolute positioning led to some problems?
                             node.parentNode.replaceChild(span, node);
                         }
@@ -104,7 +104,6 @@ function processHTML(html, callback) {
                      if (result.mml) {
                          var span = document.createElement("span");
                          span.innerHTML = result.mml;
-                         var thisMML = span.firstChild;
                          node.parentNode.replaceChild(span.firstChild, node);
                     }
                 }
