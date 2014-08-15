@@ -70,9 +70,15 @@ function svgCleaning (localElement,globalElement) {
 function processHTML(html, callback) {
     var document = jsdom(html);
     var math = document.querySelectorAll("[type='math/tex'], [type='math/tex; mode=display']");
+//    Create stylesheet 
+    var styleSheet = document.createElement('link');
+    styleSheet.setAttribute('rel', 'stylesheet');
+    styleSheet.setAttribute('type', 'text/css');
+    styleSheet.setAttribute('href', 'mathjax-node.css');
+    document.getElementsByTagName('head')[0].appendChild(styleSheet);
 //    Creating a global SVG object collecting up all paths 
     var globalSVG = document.createElement("svg");
-    globalSVG.setAttribute("style","visibility: hidden; overflow: hidden; position: absolute; top: 0px; height: 1px; width: auto; padding: 0px; border: 0px; margin: 0px; text-align: left; text-indent: 0px; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal;");
+    globalSVG.setAttribute("class","mathjax-svg-global");
     globalSVG.innerHTML = "<defs></defs>";
     var data = {
         width: 100, //change width in ex (to trigger for linebreaking, e.g., for responsive design); 100 is the default
@@ -96,11 +102,17 @@ function processHTML(html, callback) {
         typeset(data, (function (node, last) {
             return function (result) {
                 var span = document.createElement("span");
-                if (outputChoice==="svg" || outputChoice==="svg-simple"){
+                if (outputChoice==="mml"){
+                     if (result.mml) {
+                         span.innerHTML = result.mml;
+                         node.parentNode.replaceChild(span.firstChild, node);
+                    }
+                }
+                else {
                     if (result.svg) {
                         span.innerHTML = result.svg;
-                        if (node.getAttribute("type") === "math/tex; mode=display") { // FIX asynchronicity so as to use data.format
-                            span.setAttribute("style", "text-align: center; margin: 1em 0em; position: relative; display: block!important; text-indent: 0; max-width: none; max-height: none; min-width: 0; min-height: 0; width: 100%;overflow:auto"); //move to CSS!
+                        if (node.getAttribute("type") === "math/tex; mode=display") { // FIX use data.format?
+                            span.setAttribute("class", "mathjax-svg-display");
                             span.firstChild.removeAttribute("style"); // TODO removing the style fixed all cases of SVG overlapping next line. Why?
                             node.parentNode.replaceChild(span, node);
                         }
@@ -110,25 +122,6 @@ function processHTML(html, callback) {
                         if (outputChoice==="svg"){
                             svgCleaning(span,globalSVG);
                         }
-                    }
-                }
-//                else if (outputChoice==="svg-simple"){
-//                     if (result.svg) {
-//                         span.innerHTML = result.svg;
-//                        if (node.getAttribute("type") === "math/tex; mode=display") { // FIX: use data.format
-//                            span.setAttribute("style", "text-align: center; margin: 1em 0em; position: relative; display: block!important; text-indent: 0; max-width: none; max-height: none; min-width: 0; min-height: 0; width: 100%;overflow:auto");
-//                            span.firstChild.removeAttribute("style"); // FIX: TODO removing the style fixed all cases of SVG overlapping next line. Why?
-//                            node.parentNode.replaceChild(span, node);
-//                        }
-//                        else{ 
-//                            node.parentNode.replaceChild(span.firstChild, node);
-//                            }
-//                    }   
-//                }
-                else if (outputChoice==="mml"){
-                     if (result.mml) {
-                         span.innerHTML = result.mml;
-                         node.parentNode.replaceChild(span.firstChild, node);
                     }
                 }
                 if (last) {
@@ -150,7 +143,7 @@ var html = fs.readFileSync(inputFile, "utf8");
 
 processHTML(html, function (html) {
     fs.writeFile(outputFile, html, function (err) {
-        if (err) throw err;
+        if (err) {throw err;}
         console.log("It\'s saved!");
     });
 });
