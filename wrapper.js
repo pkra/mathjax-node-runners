@@ -6,6 +6,19 @@
  *  and writes a new HTML5 document to the filesystem that
  *  contains MathML or SVG versions of the math instead.
  *
+ * Copyright (c) 2013-2014 The MathJax Consortium
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. *
  */
 
 
@@ -24,7 +37,7 @@ if (process.argv.length !== 5) {
 var inputFile = process.argv[3];
 var outputFile = process.argv[4];
 var outputChoice = process.argv[2].substr(2);
-if (!outputChoice==="mml" && !outputChoice==="svg" && !outputChoice==="svg-simple"){
+if (!(outputChoice==="mml" || outputChoice==="svg" || outputChoice==="svg-simple")){
         console.log("Please use '--svg' or '--svg-simple' or '--mml'");
         process.exit(1);
     }
@@ -62,7 +75,7 @@ function processHTML(html, callback) {
     globalSVG.setAttribute("style","visibility: hidden; overflow: hidden; position: absolute; top: 0px; height: 1px; width: auto; padding: 0px; border: 0px; margin: 0px; text-align: left; text-indent: 0px; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal;");
     globalSVG.innerHTML = "<defs></defs>";
     var data = {
-        width: 100, //change width in ex 100 is the default
+        width: 100, //change width in ex (to trigger for linebreaking, e.g., for responsive design); 100 is the default
         math: "",
     //    useGlobalCache: true, //this should be the right way to gather a globalSVG but doesn't work for me at this time.
         mml:true,
@@ -82,50 +95,41 @@ function processHTML(html, callback) {
         else { data.format = "inline-TeX";}
         typeset(data, (function (node, last) {
             return function (result) {
-                if (outputChoice==="svg"){
+                var span = document.createElement("span");
+                if (outputChoice==="svg" || outputChoice==="svg-simple"){
                     if (result.svg) {
+                        span.innerHTML = result.svg;
                         if (node.getAttribute("type") === "math/tex; mode=display") { // FIX asynchronicity so as to use data.format
-                            var span = document.createElement("span");
-                            span.innerHTML = result.svg;
-                            var thisSVG = span.firstChild;
                             span.setAttribute("style", "text-align: center; margin: 1em 0em; position: relative; display: block!important; text-indent: 0; max-width: none; max-height: none; min-width: 0; min-height: 0; width: 100%;overflow:auto"); //move to CSS!
-                            thisSVG.removeAttribute("style"); // removing the style fixed overlapping
+                            span.firstChild.removeAttribute("style"); // TODO removing the style fixed all cases of SVG overlapping next line. Why?
                             node.parentNode.replaceChild(span, node);
                         }
                         else{ 
-                            var span = document.createElement("span");
-                            span.innerHTML = result.svg;
                             node.parentNode.replaceChild(span.firstChild, node);
                             }
-                        svgCleaning(span,globalSVG);
+                        if (outputChoice==="svg"){
+                            svgCleaning(span,globalSVG);
+                        }
                     }
                 }
+//                else if (outputChoice==="svg-simple"){
+//                     if (result.svg) {
+//                         span.innerHTML = result.svg;
+//                        if (node.getAttribute("type") === "math/tex; mode=display") { // FIX: use data.format
+//                            span.setAttribute("style", "text-align: center; margin: 1em 0em; position: relative; display: block!important; text-indent: 0; max-width: none; max-height: none; min-width: 0; min-height: 0; width: 100%;overflow:auto");
+//                            span.firstChild.removeAttribute("style"); // FIX: TODO removing the style fixed all cases of SVG overlapping next line. Why?
+//                            node.parentNode.replaceChild(span, node);
+//                        }
+//                        else{ 
+//                            node.parentNode.replaceChild(span.firstChild, node);
+//                            }
+//                    }   
+//                }
                 else if (outputChoice==="mml"){
                      if (result.mml) {
-                         var span = document.createElement("span");
                          span.innerHTML = result.mml;
                          node.parentNode.replaceChild(span.firstChild, node);
                     }
-                }
-                else if (outputChoice==="svg-simple"){
-//                    console.log("yay simple");
-                     if (result.svg) {
-                        if (node.getAttribute("type") === "math/tex; mode=display") { // FIX: use data.format
-                            var span = document.createElement("span");
-                            span.innerHTML = result.svg;
-                            var thisSVG = span.firstChild;
-                            span.setAttribute("style", "text-align: center; margin: 1em 0em; position: relative; display: block!important; text-indent: 0; max-width: none; max-height: none; min-width: 0; min-height: 0; width: 100%;overflow:auto");
-                            thisSVG.removeAttribute("style"); // FIX: the absolute positioning led to some problems?
-                            node.parentNode.replaceChild(span, node);
-        //                            svgCleaning(span,globalSVG);
-                        }
-                        else{ 
-                            var span = document.createElement("span");
-                            span.innerHTML = result.svg;
-        //                            svgCleaning(span,globalSVG);
-                            node.parentNode.replaceChild(span.firstChild, node);
-                            }
-                    }   
                 }
                 if (last) {
                     if (outputChoice==="svg"){
