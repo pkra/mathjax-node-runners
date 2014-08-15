@@ -10,7 +10,7 @@ A working copy of [MathJax-node](http://github.com/mathjax/mathjax-node).
 
 ### wrapper.js
 
-A basice wrapper around a server-side MathJax solution with the goal of converting HTML fragments with MathJax input to HTML fragments with (cleaned up) MathJax output.
+A basic wrapper around a server-side MathJax solution with the goal of converting HTML fragments with MathJax input to HTML fragments with (cleaned up) MathJax output.
 
 Usage:
 
@@ -20,5 +20,8 @@ where `FORMAT` is `svg`, `svg-simple`, or `mml`.
 
 * `svg`: creating a global SVG object with paths for re-use; efficient but not always ideal for post-processing, e.g., [HTMLbook](https://github.com/oreillymedia/HTMLBook))
 * `svg-simple`: no global SVG object, each SVG is self-contained; inefficient but simplifies post-processing.
-* `mml`: converts to MathML. For convenience; bascically equivalent to MathJax-node's `page2mml`.
+* `mml`: converts to MathML. For convenience; basically equivalent to MathJax-node's `page2mml`.
 
+### fspage2mml
+
+A simple variant to MathJax-node's `page2mml`, loading files via `fs.readFileSync` for efficiency.
