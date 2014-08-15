@@ -1,0 +1,30 @@
+.mathjax-svg-display {
+    text-align: center;
+    margin: 1em 0em;
+    position: relative;
+    display: block!important;
+    text-indent: 0;
+    max-width: none;
+    max-height: none;
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    overflow: auto
+}
+.mathjax-svg-global {
+    visibility: hidden;
+    overflow: hidden;
+    position: absolute;
+    top: 0px;
+    height: 1px;
+    width: auto;
+    padding: 0px;
+    border: 0px;
+    margin: 0px;
+    text-align: left;
+    text-indent: 0px;
+    text-transform: none;
+    line-height: normal;
+    letter-spacing: normal;
+    word-spacing: normal;
+}
