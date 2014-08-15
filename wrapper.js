@@ -64,14 +64,14 @@ function processHTML(html, callback) {
     var data = {
         width: 100, //change width in ex 100 is the default
         math: "",
-    //    useGlobalCache: true, //this should be the right way to gather a globalSVG but doesn't work for me
+    //    useGlobalCache: true, //this should be the right way to gather a globalSVG but doesn't work for me at this time.
         mml:true,
         svg: true,
         state: {} //see useGlobalCache
     };
     if (outputChoice==="svg-simple"){
         data.useFontCache = false;
-//        data.useGlobalCache = false;
+        data.useGlobalCache = false;
     }
 
     for (var i = 0, m = math.length; i < m; i++) {
@@ -84,12 +84,12 @@ function processHTML(html, callback) {
             return function (result) {
                 if (outputChoice==="svg"){
                     if (result.svg) {
-                        if (node.getAttribute("type") === "math/tex; mode=display") { // FIX: can't use data.format b/c it's asynchronous
+                        if (node.getAttribute("type") === "math/tex; mode=display") { // FIX asynchronicity so as to use data.format
                             var span = document.createElement("span");
                             span.innerHTML = result.svg;
                             var thisSVG = span.firstChild;
                             span.setAttribute("style", "text-align: center; margin: 1em 0em; position: relative; display: block!important; text-indent: 0; max-width: none; max-height: none; min-width: 0; min-height: 0; width: 100%;overflow:auto"); //move to CSS!
-                            thisSVG.removeAttribute("style"); // FIX: the absolute positioning led to some problems?
+                            thisSVG.removeAttribute("style"); // removing the style fixed overlapping
                             node.parentNode.replaceChild(span, node);
                         }
                         else{ 
