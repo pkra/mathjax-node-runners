@@ -26,7 +26,7 @@
  *  limitations under the License.
  */
 
-var mjAPI = require("./MathJax-node/lib/mj-single.js");
+var mjAPI = require("MathJax-node/lib/mj-single");
 var typeset = mjAPI.typeset;
 var fs = require('fs');
 var path = require('path');
@@ -55,13 +55,13 @@ var argv = require("yargs")
 //      describe: "perform automatic line-breaking on SVG (see --width)"
 //    },
 //    inputFormat: {
-//      default: "AsciiMath,TeX,MathML",
+//      default: "AsciiMath,TeX,MathML", //TODO make his input agnostic
 //      describe: "input format(s) to look for",
 //    },
-//    outputFormat: {
-//      default: "MathML",
-//      describe: "output format(s) to generate" //NOTE add multiple versions
-//    },
+   outputFormat: {
+     default: "MathML, SVG",
+     describe: "output format(s) to generate; MathML, SVG, or PNG" //NOTE add multiple versions
+   },
 //    font: {
 //      default: "TeX",
 //      describe: "web font to use (for image output)"
@@ -78,13 +78,12 @@ var argv = require("yargs")
   .demand(['i','o'])
   .argv;
 
-argv.format = argv.inputFormat.split(/ *, */);
+outputFormats = argv.outputFormat.split(/ *, */);
 if (argv.font === "STIX") {argv.font = "STIX-Web";}
 
 
 var inputFile = fs.readFileSync(path.join(__dirname, argv.i));
 var xmlDocument = libxmljs.parseXml(inputFile);
-
 
 mjAPI.config({
   MathJax: {
@@ -102,13 +101,21 @@ function processMath(texMathNode, callback) {
     typeset({
           math: texString,
           format: (dispStyle ? "TeX":"inline-TeX"),
-          mml:true,
+          mml: (outputFormats.indexOf('MathML') > -1),
+          svg: (outputFormats.indexOf('SVG') > -1),
+          png: (outputFormats.indexOf('PNG') > -1),
         }, function (data) {
           if (!data.errors) {
-              var mmlString = data.mml.replace(/ xmlns="http:\/\/www.w3.org\/1998\/Math\/MathML"/g,'');  //TODO maybe tell MathJax-node not to add the namespace? Or figure out how libxmljs could do it?
-              var mmlNode = libxmljs.parseXml(mmlString);
-              texMathNode.addPrevSibling(mmlNode.root());
-          } 
+              if (data.svg){
+                  var svgNode = libxmljs.parseXml(data.svg);
+                  texMathNode.addPrevSibling(svgNode.root());
+              }
+              if (data.mml){
+                  var mmlString = data.mml.replace(/ xmlns="http:\/\/www.w3.org\/1998\/Math\/MathML"/g,'');  //TODO maybe tell MathJax-node not to add the namespace? Or figure out how libxmljs could do it?
+                  var mmlNode = libxmljs.parseXml(mmlString);
+                  texMathNode.addPrevSibling(mmlNode.root());                
+              }
+          }
         callback(data.errors);
     });
 }
@@ -122,7 +129,7 @@ async.each(texMathNodes, processMath, function (err) {
         for (var idx = 0; idx < mmlNodes.length; idx++) {
               mmlNodes[idx].namespace('mml', '');
         }
-        console.log(xmlDocument.toString());
+//         console.log(xmlDocument.toString());
         fs.writeFile(argv.o, xmlDocument, function (err) {
         if (err) {throw err;}
         console.log("It\'s saved!");
