@@ -107,13 +107,27 @@ function processMath(texMathNode, callback) {
         }, function (data) {
           if (!data.errors) {
               if (data.svg){
-                  var svgNode = libxmljs.parseXml(data.svg);
+                // remove ids to avoid clash; see https://github.com/pkra/lens-ams/issues/17
+                  var svgString = data.svg.replace(/<g id="/g,'<g xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="resource" xlink:label="');//TODO use xpath instead
+                  var svgNode = libxmljs.parseXml(svgString);
+//                   var svgIds = svgNode.find('//g[@id]');// why is this not working?
+//                   console.log(svgIds.toString());
+//                   for (var idx = 0; idx < svgIds.length; idx++) {
+//                         var currentNode = svgIds[idx];
+//                         var currentId = currentNode.attr('id');
+//                         console.log(currentId);
+//                   }
                   texMathNode.addPrevSibling(svgNode.root());
+                //TODO Remove ID from SVG and create xlink:type="resource" xlink:label="ID value"
               }
               if (data.mml){
-                  var mmlString = data.mml.replace(/ xmlns="http:\/\/www.w3.org\/1998\/Math\/MathML"/g,'');  //TODO maybe tell MathJax-node not to add the namespace? Or figure out how libxmljs could do it?
+                  var mmlString = data.mml.replace(/ xmlns="http:\/\/www.w3.org\/1998\/Math\/MathML"/g,'')//TODO maybe tell MathJax-node not to add the namespace? Or figure out how libxmljs could do it?
+                                          .replace(/<annotation encoding="application\/x-tex">/g,'<annotation encoding="application/x-tex"><![CDATA[') //TODO just escape the relevant characters
+                                          .replace(/<\/annotation>/g,']]></annotation>');  
+//                   console.log(mmlString);
                   var mmlNode = libxmljs.parseXml(mmlString);
                   texMathNode.addPrevSibling(mmlNode.root());                
+                  //TODO Remove ID from MathML and creat  xlink:type="resource" xlink:label="ID value"
               }
           }
         callback(data.errors);
