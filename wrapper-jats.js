@@ -108,26 +108,37 @@ function processMath(texMathNode, callback) {
           if (!data.errors) {
               if (data.svg){
                 // remove ids to avoid clash; see https://github.com/pkra/lens-ams/issues/17
-                  var svgString = data.svg.replace(/<g id="/g,'<g xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="resource" xlink:label="');//TODO use xpath instead
-                  var svgNode = libxmljs.parseXml(svgString);
-//                   var svgIds = svgNode.find('//g[@id]');// why is this not working?
-//                   console.log(svgIds.toString());
-//                   for (var idx = 0; idx < svgIds.length; idx++) {
-//                         var currentNode = svgIds[idx];
-//                         var currentId = currentNode.attr('id');
-//                         console.log(currentId);
-//                   }
+                  var svgNode = libxmljs.parseXml(data.svg);
+                  var svgIds = svgNode.find('.//*[name()="g"][@id]');// why does //g not work? Oh well. This does work.
+                  for (var idx = 0; idx < svgIds.length; idx++) {
+                        var currentNode = svgIds[idx];
+                        var currentId = currentNode.attr('id');
+                        currentNode.attr({'xlink:type': 'resource'});
+                        currentNode.defineNamespace('xlink', 'http://www.w3.org/1999/xlink')
+                        currentNode.attr({'xlink:label': currentId.value()});
+                        currentNode.attr({'id': ''});
+                  }
                   texMathNode.addPrevSibling(svgNode.root());
-                //TODO Remove ID from SVG and create xlink:type="resource" xlink:label="ID value"
               }
               if (data.mml){
-                  var mmlString = data.mml.replace(/ xmlns="http:\/\/www.w3.org\/1998\/Math\/MathML"/g,'')//TODO maybe tell MathJax-node not to add the namespace? Or figure out how libxmljs could do it?
-                                          .replace(/<annotation encoding="application\/x-tex">/g,'<annotation encoding="application/x-tex"><![CDATA[') //TODO just escape the relevant characters
-                                          .replace(/<\/annotation>/g,']]></annotation>');  
-//                   console.log(mmlString);
+                  var mmlString = data.mml.replace(/ xmlns="http:\/\/www.w3.org\/1998\/Math\/MathML"/g,'')
+                                           // Work around part 1 -- for https://github.com/mathjax/MathJax-node/issues/46
+                                          .replace(/<annotation encoding="application\/x-tex">(.*?)<\/annotation>/g, '<annotation encoding="application/x-tex"/>');
+                                          // end work around
                   var mmlNode = libxmljs.parseXml(mmlString);
-                  texMathNode.addPrevSibling(mmlNode.root());                
-                  //TODO Remove ID from MathML and creat  xlink:type="resource" xlink:label="ID value"
+                  // Work around part 2 -- for https://github.com/mathjax/MathJax-node/issues/46 
+                  var annotationNode = mmlNode.find('*/annotation')[0];
+                  annotationNode.text(texMathNode.text());
+                  // end work around
+                  var mmlIds = mmlNode.find('.//*[name()="mrow"][@id]');// why does //g not work? Oh well. This does work.
+                  for (var idx = 0; idx < mmlIds.length; idx++) {
+                        var currentNode = mmlIds[idx];
+                        var currentId = currentNode.attr('id');
+                        currentNode.attr({'xlink:type': 'resource'});
+                        currentNode.defineNamespace('xlink', 'http://www.w3.org/1999/xlink')
+                        currentNode.attr({'xlink:label': currentId.value()});
+                  }
+                  texMathNode.addPrevSibling(mmlNode.root());
               }
           }
         callback(data.errors);
