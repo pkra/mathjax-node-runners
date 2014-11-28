@@ -78,7 +78,7 @@ var argv = require("yargs")
   .demand(['i','o'])
   .argv;
 
-outputFormats = argv.outputFormat.split(/ *, */);
+var outputFormats = argv.outputFormat.split(/ *, */);
 if (argv.font === "STIX") {argv.font = "STIX-Web";}
 
 
@@ -89,14 +89,21 @@ mjAPI.config({
   MathJax: {
     menuSettings: {
       semantics: true,
-    }
+    },
+    "displayAlign": "left", 	
+    "displayIndent": "5em"
   }
 });
 mjAPI.start();
 
 function processMath(texMathNode, callback) { 
     var formulaNode = texMathNode.parent();
-    var texString = texMathNode.text();
+    formulaNode.addChild(libxmljs.parseXml("<alternatives/>").root());
+    var alternativesTag = formulaNode.find('.//*[name()="alternatives"]')[0];
+    alternativesTag.addChild(texMathNode.clone());
+    texMathNode.remove();
+    var thisTexMathNode = alternativesTag.find('.//*[name()="tex-math"]')[0];
+    var texString = thisTexMathNode.text();
     var dispStyle = (formulaNode.name()==='disp-formula');
     typeset({
           math: texString,
@@ -109,36 +116,40 @@ function processMath(texMathNode, callback) {
               if (data.svg){
                 // remove ids to avoid clash; see https://github.com/pkra/lens-ams/issues/17
                   var svgNode = libxmljs.parseXml(data.svg);
-                  var svgIds = svgNode.find('.//*[name()="g"][@id]');// why does //g not work? Oh well. This does work.
+                  var svgIds = svgNode.find('.//*[name()="g"][@id]');
                   for (var idx = 0; idx < svgIds.length; idx++) {
                         var currentNode = svgIds[idx];
                         var currentId = currentNode.attr('id');
                         currentNode.attr({'xlink:type': 'resource'});
-                        currentNode.defineNamespace('xlink', 'http://www.w3.org/1999/xlink')
+                        currentNode.defineNamespace('xlink', 'http://www.w3.org/1999/xlink');
                         currentNode.attr({'xlink:label': currentId.value()});
                         currentNode.attr({'id': ''});
                   }
-                  texMathNode.addPrevSibling(svgNode.root());
+                  thisTexMathNode.addPrevSibling(svgNode.root());
               }
               if (data.mml){
-                  var mmlString = data.mml.replace(/ xmlns="http:\/\/www.w3.org\/1998\/Math\/MathML"/g,'')
-                                           // Work around part 1 -- for https://github.com/mathjax/MathJax-node/issues/46
-                                          .replace(/<annotation encoding="application\/x-tex">(.*?)<\/annotation>/g, '<annotation encoding="application/x-tex"/>');
-                                          // end work around
+                  // Work around part 1 -- for https://github.com/mathjax/MathJax-node/issues/46
+                  var mmlString = data.mml.replace(/<annotation encoding="application\/x-tex">(.|\n)*?<\/annotation>/g, '<annotation encoding="application/x-tex"/>'); 
+                  // end work around
                   var mmlNode = libxmljs.parseXml(mmlString);
                   // Work around part 2 -- for https://github.com/mathjax/MathJax-node/issues/46 
-                  var annotationNode = mmlNode.find('*/annotation')[0];
-                  annotationNode.text(texMathNode.text());
+                  var annotationNode = mmlNode.find('.//*[name()="annotation"]')[0];
+                  try { annotationNode.text(thisTexMathNode.text()); } catch(e){ console.log("annotationNode: error at: \n " + mmlNode.toString()); }
                   // end work around
-                  var mmlIds = mmlNode.find('.//*[name()="mrow"][@id]');// why does //g not work? Oh well. This does work.
-                  for (var idx = 0; idx < mmlIds.length; idx++) {
-                        var currentNode = mmlIds[idx];
-                        var currentId = currentNode.attr('id');
+                  var mmlLabels = mmlNode.find('.//*[name()="mlabeledtr"]');// adding xlink attributes
+                  for (var idx = 0; idx < mmlLabels.length; idx++) {
+                        var currentNode = mmlLabels[idx].child(1);
                         currentNode.attr({'xlink:type': 'resource'});
-                        currentNode.defineNamespace('xlink', 'http://www.w3.org/1999/xlink')
-                        currentNode.attr({'xlink:label': currentId.value()});
+                        currentNode.defineNamespace('xlink', 'http://www.w3.org/1999/xlink');
+                        currentNode.attr({'xlink:title': currentNode.child(1).text()}); // This assumes the label is simple text
+                        try {
+                          // check for extra ids created by \cssID{xxx}{} and only add those as xlink:label
+                          var idNode = mmlNode.find('.//*[name()="mrow"][@id]')[0];
+                          var currentId = idNode.attr('id');
+                          currentNode.attr({'xlink:label': currentId.value()});
+                        } catch(e) { console.log("no \\cssId in: " + thisTexMathNode.toString()); }
                   }
-                  texMathNode.addPrevSibling(mmlNode.root());
+                  thisTexMathNode.addPrevSibling(mmlNode.root());
               }
           }
         callback(data.errors);
@@ -149,14 +160,9 @@ var texMathNodes = xmlDocument.find('//tex-math');
 
 
 async.each(texMathNodes, processMath, function (err) {
-        if (err) {throw err;}
-        var mmlNodes = xmlDocument.find('//math//* | //math');
-        for (var idx = 0; idx < mmlNodes.length; idx++) {
-              mmlNodes[idx].namespace('mml', '');
-        }
-//         console.log(xmlDocument.toString());
-        fs.writeFile(argv.o, xmlDocument, function (err) {
-        if (err) {throw err;}
-        console.log("It\'s saved!");
-    });
-    });
+  if (err) {throw err;}
+  fs.writeFile(argv.o, xmlDocument, function (err) {
+  if (err) {throw err;}
+  });
+  console.log("It\'s saved!");
+});
