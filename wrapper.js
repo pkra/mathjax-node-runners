@@ -42,22 +42,6 @@ if (!(outputChoice==="mml" || outputChoice==="svg" || outputChoice==="svg-simple
         process.exit(1);
     }
 
-
-// function for moving paths to a global element
-function svgCleaning (localElement,globalElement) {
-    var thePaths = localElement.querySelectorAll("path");
-    for (var i = 0; i < thePaths.length; i++) {
-        var currentPath = thePaths[i];
-        var currentPathID = currentPath.getAttribute("id");
-        if ( globalElement.querySelector("#"+currentPathID) === null){
-            globalElement.firstChild.appendChild(currentPath);     
-        }
-        else {
-            currentPath.parentNode.removeChild(currentPath);
-        }
-    }
-}
-
 //
 //  Process an HTML file:
 //    Find all math elements,
@@ -68,7 +52,7 @@ function svgCleaning (localElement,globalElement) {
 //        do the callback with the complete page.
 //
 function processHTML(html, callback) {
-    var document = jsdom(html);
+    var document = jsdom(html,null,{features:{FetchExternalResources: false}});
     var math = document.querySelectorAll("[type='math/tex'], [type='math/tex; mode=display']");
 //    Create stylesheet 
     var styleSheet = document.createElement('link');
@@ -79,60 +63,51 @@ function processHTML(html, callback) {
 //    Creating a global SVG object collecting up all paths 
     var globalSVG = document.createElement("svg");
     globalSVG.setAttribute("class","mathjax-svg-global");
-    globalSVG.innerHTML = "<defs></defs>";
-    var data = {
-        width: 100, //change width in ex (to trigger for linebreaking, e.g., for responsive design); 100 is the default
-        math: "",
-    //    useGlobalCache: true, //this should be the right way to gather a globalSVG but doesn't work for me at this time.
-        mml:true,
-        svg: true,
-        state: {} //see useGlobalCache
-    };
-    if (outputChoice==="svg-simple"){
-        data.useFontCache = false;
-        data.useGlobalCache = false;
-    }
+    var state = {};  // shared state among typeset requests (<defs> is stored here)
 
     for (var i = 0, m = math.length; i < m; i++) {
-        data.math = math[i].text;
-        if (math[i].getAttribute("type")==="math/tex; mode=display") {
-            data.format = "TeX";
-        }
-        else { data.format = "inline-TeX";}
+	var data = {
+	    width: 100, // change width in ex (to trigger for linebreaking, e.g., for responsive design);
+	                // 100 is the default
+	    math: math[i].text,
+	    format: (math[i].getAttribute("type") === "math/tex; mode=display" ? "TeX" : "inline-TeX"),
+	    useFontCache: (outputChoice !== "svg-simple"),
+	    useGlobalCache: true,
+	    mml: (outputChoice === "mml"),
+	    svg: (outputChoice !== "mml"),
+	    state: state
+	};
         typeset(data, (function (node, last) {
             return function (result) {
                 var span = document.createElement("span");
-                if (outputChoice==="mml"){
+                if (outputChoice === "mml"){
                      if (result.mml) {
                          span.innerHTML = result.mml;
                          node.parentNode.replaceChild(span.firstChild, node);
                     }
-                }
-                else {
+                } else {
                     if (result.svg) {
                         span.innerHTML = result.svg;
                         if (node.getAttribute("type") === "math/tex; mode=display") { // FIX use data.format?
                             span.setAttribute("class", "mathjax-svg-display");
                             span.firstChild.removeAttribute("style"); // TODO removing the style fixed all cases of SVG overlapping next line. Why?
                             node.parentNode.replaceChild(span, node);
-                        }
-                        else{ 
+                        } else { 
                             node.parentNode.replaceChild(span.firstChild, node);
-                            }
-                        if (outputChoice==="svg"){
-                            svgCleaning(span,globalSVG);
                         }
                     }
                 }
                 if (last) {
-                    if (outputChoice==="svg"){
+                    if (outputChoice === "svg"){
+			globalSVG.appendChild(document.importNode(state.defs,true));
                         document.body.appendChild(globalSVG);
                     }
-                    callback(document.outerHTML);
+                    callback(document.documentElement.outerHTML);
                 }
             };
         })(math[i], i == m - 1));
     }
+    if (m === 0) callback(document.documentElement.outerHTML);  // in case there are no math elements
 }
 
 //
@@ -142,7 +117,7 @@ function processHTML(html, callback) {
 var html = fs.readFileSync(inputFile, "utf8");
 
 processHTML(html, function (html) {
-    fs.writeFile(outputFile, html, function (err) {
+    fs.writeFile(outputFile, "<!DOCTYPE html>\n"+html, function (err) {
         if (err) {throw err;}
         console.log("It\'s saved!");
     });
